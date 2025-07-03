@@ -4,17 +4,21 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import PrivateRoute from "./components/PrivateRoute";
 import About from "./pages/About";
 import Videos from "./pages/Videos";
 import Contact from "./pages/Contact";
 import PlantDiseaseDetection from "./pages/PlantDiseaseDetection";
 import UserDashboard from "./pages/UserDashboard";
+import { Outlet } from "react-router-dom";
 
-// Layout standard avec Header et Footer
-const Layout = ({ children }) => (
+// Layout avec outlet
+const Layout = () => (
   <>
     <Header />
-    <main>{children}</main>
+    <main>
+      <Outlet />
+    </main>
     <Footer />
   </>
 );
@@ -23,15 +27,33 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Pages avec Header et Footer */}
-        <Route path="/" element={<Layout><Home /></Layout>} />
-        <Route path="/about" element={<Layout><About /></Layout>} />
-        <Route path="/videos" element={<Layout><Videos /></Layout>} />
-        <Route path="/contact" element={<Layout><Contact /></Layout>} />
-        <Route path="/detection" element={<Layout><PlantDiseaseDetection /></Layout>} />
-          <Route path="/dashboard" element={<Layout><UserDashboard /></Layout>} />
+        {/* Routes avec Layout */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/videos" element={<Videos />} />
+          <Route path="/contact" element={<Contact />} />
 
-        {/* Pages sans Header/Footer */}
+          {/* Routes protégées */}
+          <Route
+            path="/detection"
+            element={
+              <PrivateRoute>
+                <PlantDiseaseDetection />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <UserDashboard />
+              </PrivateRoute>
+            }
+          />
+        </Route>
+
+        {/* Routes publiques */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

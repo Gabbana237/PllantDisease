@@ -1,14 +1,45 @@
-import React, { useState } from 'react';
-import { User } from 'lucide-react';
+import React, { useState, useContext } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "./AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Email:', email);
-    console.log('Password:', password);
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const response = await axios.post("http://172.20.10.2:8000/api/login", {
+        email,
+        password,
+      });
+      console.log("Réponse API login:", response.data);
+
+      const token = response.data.token;
+      if (token) {
+        console.log("Token:", token);
+        const user = response.data.user;
+        login(token, user); // stocke token et user dans contexte
+        navigate("/dashboard");
+      } else {
+        setErrorMsg("Connexion impossible : token manquant.");
+      }
+    } catch (error) {
+      setErrorMsg(
+        error.response?.data?.message || "Erreur réseau ou serveur"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,7 +62,8 @@ const Login = () => {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow text-black"
             placeholder="Votre adresse email"
           />
         </div>
@@ -46,18 +78,25 @@ const Login = () => {
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow text-black"
             placeholder="Votre mot de passe"
           />
         </div>
 
+        {/* Message d'erreur */}
+        {errorMsg && (
+          <p className="text-red-600 text-sm mb-4 text-center">{errorMsg}</p>
+        )}
+
         {/* Bouton submit */}
         <button
           type="submit"
+          disabled={loading}
           style={{ backgroundColor: '#FACC15' }}
-          className="w-full py-3 px-4 text-emerald-800 font-semibold rounded-lg hover:bg-yellow-300 transition-colors duration-200"
+          className="w-full py-3 px-4 text-emerald-800 font-semibold rounded-lg hover:bg-yellow-300 transition-colors duration-200 disabled:opacity-50"
         >
-          Se connecter
+          {loading ? 'Connexion...' : 'Se connecter'}
         </button>
       </form>
 
