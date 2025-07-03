@@ -105,7 +105,7 @@ const UserDashboard = () => {
               onClick={() => setActiveTab(id)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 activeTab === id
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-green-600 text-darkgreen'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
