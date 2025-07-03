@@ -1,42 +1,30 @@
-import React, { useState, useContext } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "./AuthContext";
+import React, { useState } from "react";
 
-const Login = () => {
-  const { login } = useContext(AuthContext);
-  const navigate = useNavigate();
-
+const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    setSuccessMsg("");
 
     try {
-      const response = await axios.post("http://172.20.10.2:8000/api/login", {
-        email,
-        password,
-      });
-      console.log("Réponse API login:", response.data);
-
-      const token = response.data.token;
-      if (token) {
-        console.log("Token:", token);
-        const user = response.data.user;
-        login(token, user); // stocke token et user dans contexte
-        navigate("/dashboard");
-      } else {
-        setErrorMsg("Connexion impossible : token manquant.");
-      }
+      // Simuler un appel API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Ici vous pourrez remplacer par votre appel API réel
+      // const response = await axios.post("http://172.20.10.2:8000/api/forgot-password", {
+      //   email,
+      // });
+      
+      setSuccessMsg("Un lien de réinitialisation a été envoyé à votre adresse email.");
+      setEmail(""); // Reset form
     } catch (error) {
-      setErrorMsg(
-        error.response?.data?.message || "Erreur réseau ou serveur"
-      );
+      setErrorMsg("Erreur réseau ou serveur");
     } finally {
       setLoading(false);
     }
@@ -47,11 +35,18 @@ const Login = () => {
       {/* Logo */}
       <div className="mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold text-emerald-800">La Clinique Des Plantes</h1>
-        <p className="text-sm text-emerald-600 mt-1">Connectez-vous pour accéder à vos diagnostics</p>
+        <p className="text-sm text-emerald-600 mt-1">Réinitialisez votre mot de passe</p>
       </div>
 
       {/* Formulaire */}
-      <form onSubmit={handleSubmit} className="w-full max-w-md p-5 bg-white rounded-xl shadow-lg">
+      <div className="w-full max-w-md p-5 bg-white rounded-xl shadow-lg">
+        {/* Instructions */}
+        <div className="mb-6 text-center">
+          <p className="text-sm text-gray-600">
+            Entrez votre adresse email pour recevoir un code de réinitialisation de mot de passe.
+          </p>
+        </div>
+
         {/* Email */}
         <div className="mb-5">
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -68,42 +63,31 @@ const Login = () => {
           />
         </div>
 
-        {/* Password */}
-        <div className="mb-6">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Mot de passe
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow text-black"
-            placeholder="Votre mot de passe"
-          />
-        </div>
-
         {/* Message d'erreur */}
         {errorMsg && (
           <p className="text-red-600 text-sm mb-4 text-center">{errorMsg}</p>
         )}
 
+        {/* Message de succès */}
+        {successMsg && (
+          <p className="text-green-600 text-sm mb-4 text-center">{successMsg}</p>
+        )}
+
         {/* Bouton submit */}
         <button
-          type="submit"
+          onClick={handleSubmit}
           disabled={loading}
           style={{ backgroundColor: '#FACC15' }}
           className="w-full py-3 px-4 text-emerald-800 font-semibold rounded-lg hover:bg-yellow-300 transition-colors duration-200 disabled:opacity-50"
         >
-          {loading ? 'Connexion...' : 'Se connecter'}
+          {loading ? 'Envoi en cours...' : 'Envoyer le lien'}
         </button>
-      </form>
+      </div>
 
       {/* Liens supplémentaires */}
       <div className="mt-6 text-center w-full max-w-md text-sm px-4">
-        <a href="/forgot" className="text-yellow-500 hover:text-yellow-600">
-          Mot de passe oublié ?
+        <a href="/login" className="text-yellow-500 hover:text-yellow-600">
+          Retour à la connexion
         </a>
         <p className="mt-3">
           Pas encore inscrit ?{' '}
@@ -116,4 +100,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;
