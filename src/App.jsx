@@ -49,9 +49,9 @@ function App() {
           <Route
             path="/detection"
             element={
-              <PrivateRoute>
+             
                 <PlantDiseaseDetection />
-              </PrivateRoute>
+             
             }
           />
         
