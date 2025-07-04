@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, FileImage, X, CheckCircle, Leaf, Zap, Camera, ArrowRight, AlertTriangle, BookOpen, Droplets, Wifi, WifiOff } from 'lucide-react';
+import { Upload, FileImage, X, CheckCircle, Leaf, Camera, ArrowRight, AlertTriangle, BookOpen, Droplets } from 'lucide-react';
 
 const PlantDiseaseDetection = () => {
   const [files, setFiles] = useState([]);
@@ -8,30 +8,41 @@ const PlantDiseaseDetection = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentPage, setCurrentPage] = useState('upload'); // 'upload' ou 'results'
   const [analysisResults, setAnalysisResults] = useState([]);
-  const [apiUrl, setApiUrl] = useState('http://localhost:5000'); // URL de votre API Flask
   const [apiError, setApiError] = useState(null);
-  const [isApiConnected, setIsApiConnected] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Fonction pour tester la connexion à l'API
-  const testApiConnection = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/`);
-      if (response.ok) {
-        setIsApiConnected(true);
-        setApiError(null);
-        return true;
-      } else {
-        setIsApiConnected(false);
-        setApiError('API non accessible');
-        return false;
-      }
-    } catch (error) {
-      setIsApiConnected(false);
-      setApiError('Erreur de connexion à l\'API');
-      return false;
+  // URL de l'API configurée directement
+  const API_URL = 'http://localhost:5000';
+
+  // Ajouter les styles d'animation personnalisés
+  const styles = `
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-  };
+    
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    .animate-shimmer {
+      animation: shimmer 2s infinite;
+    }
+    
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+  `;
 
   // Fonction pour appeler l'API de prédiction
   const predictDisease = async (file) => {
@@ -39,7 +50,7 @@ const PlantDiseaseDetection = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(`${apiUrl}/predict`, {
+      const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         body: formData,
       });
@@ -143,13 +154,6 @@ const PlantDiseaseDetection = () => {
     setIsAnalyzing(true);
     setApiError(null);
 
-    // Tester la connexion à l'API d'abord
-    const isConnected = await testApiConnection();
-    if (!isConnected) {
-      setIsAnalyzing(false);
-      return;
-    }
-
     try {
       const completedFiles = files.filter(f => f.status === 'completed');
       const results = [];
@@ -167,7 +171,6 @@ const PlantDiseaseDetection = () => {
             status: prediction.status,
             confidence: prediction.confidence,
             isHealthy: prediction.status === 'SAIN',
-            // Ajouter des conseils de traitement basés sur le statut
             treatment: prediction.status === 'SAIN'
               ? 'Plante en bonne santé ! Continuez les soins habituels.'
               : `Traitement recommandé pour ${prediction.disease}. Consultez un spécialiste pour des conseils spécifiques.`
@@ -209,64 +212,11 @@ const PlantDiseaseDetection = () => {
   const completedFiles = files.filter(f => f.status === 'completed');
   const canAnalyze = completedFiles.length > 0 && !isAnalyzing;
 
-  // Composant pour les paramètres de l'API
-  const ApiSettings = () => (
-    <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <Wifi className="w-5 h-5 mr-2 text-blue-600" />
-        Configuration API
-      </h3>
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL de l'API Flask
-          </label>
-          <input
-            type="url"
-            value={apiUrl}
-            onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="http://localhost:5000"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <button
-          onClick={testApiConnection}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200 flex items-center space-x-2"
-        >
-          <Wifi className="w-4 h-4" />
-          <span>Tester</span>
-        </button>
-      </div>
-
-      {isApiConnected !== null && (
-        <div className={`mt-3 p-3 rounded-md flex items-center space-x-2 ${isApiConnected
-            ? 'bg-green-50 text-green-800'
-            : 'bg-red-50 text-red-800'
-          }`}>
-          {isApiConnected ? (
-            <CheckCircle className="w-4 h-4" />
-          ) : (
-            <WifiOff className="w-4 h-4" />
-          )}
-          <span className="text-sm font-medium">
-            {isApiConnected ? 'API connectée' : 'API non accessible'}
-          </span>
-        </div>
-      )}
-
-      {apiError && (
-        <div className="mt-3 p-3 bg-red-50 text-red-800 rounded-md">
-          <p className="text-sm">{apiError}</p>
-        </div>
-      )}
-    </div>
-  );
-
   // Page de téléchargement
   const UploadPage = () => (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-12">
-        {/* Header simple */}
+        {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-600 rounded-full mb-6">
             <Leaf className="w-10 h-10 text-white" />
@@ -280,14 +230,21 @@ const PlantDiseaseDetection = () => {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          {/* Configuration API */}
-          <ApiSettings />
+          {/* Affichage des erreurs API */}
+          {apiError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+                <p className="text-red-800 font-medium">{apiError}</p>
+              </div>
+            </div>
+          )}
 
-          {/* Zone de téléchargement avec drag & drop amélioré */}
+          {/* Zone de téléchargement avec drag & drop */}
           <div
             className={`relative border-2 border-dashed rounded-xl p-16 mb-8 transition-all duration-300 ${isDragging
-                ? 'border-blue-400 bg-blue-50 shadow-lg scale-105'
-                : 'border-gray-300 bg-white hover:border-gray-400'
+              ? 'border-blue-400 bg-blue-50 shadow-lg scale-105'
+              : 'border-gray-300 bg-white hover:border-gray-400'
               }`}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
@@ -301,8 +258,8 @@ const PlantDiseaseDetection = () => {
 
             <div className="text-center relative z-10">
               <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 transition-all duration-300 ${isDragging
-                  ? 'bg-blue-100 scale-110'
-                  : 'bg-gray-100 hover:bg-gray-200'
+                ? 'bg-blue-100 scale-110'
+                : 'bg-gray-100 hover:bg-gray-200'
                 }`}>
                 <Upload className={`w-10 h-10 transition-all duration-300 ${isDragging ? 'text-blue-600 animate-bounce' : 'text-gray-600'
                   }`} />
@@ -324,11 +281,17 @@ const PlantDiseaseDetection = () => {
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                style={{ backgroundColor: '#FACC15' }}
                 className={`px-8 py-4 rounded-full font-medium text-lg transition-all duration-300 ${isDragging
-                    ? 'scale-105'
-                    : 'hover:scale-105'
-                  } shadow-lg hover:shadow-xl text-gray-900 hover:bg-yellow-500`}
+                  ? 'scale-105'
+                  : 'hover:scale-105'
+                  } shadow-lg hover:shadow-xl text-gray-900`}
+                style={{ backgroundColor: "#FACC15" }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#EAB308";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "#FACC15";
+                }}
               >
                 Sélectionner des images
               </button>
@@ -416,15 +379,25 @@ const PlantDiseaseDetection = () => {
               <button
                 onClick={startAnalysis}
                 disabled={!canAnalyze}
-                style={{ backgroundColor: canAnalyze ? '#16A34A' : '#D1D5DB' }}
-                className={`px-8 py-4 rounded-lg font-medium text-lg transition-all duration-200 flex items-center justify-center mx-auto space-x-3 ${canAnalyze
-                    ? 'text-white shadow-lg hover:bg-green-700'
-                    : 'text-gray-500 cursor-not-allowed'
+                className={`px-8 py-4 rounded-lg font-medium text-lg transition-all duration-200 flex items-center justify-center mx-auto space-x-3 ${!canAnalyze
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'text-gray-900 shadow-lg hover:scale-105'
                   }`}
+                style={canAnalyze ? { backgroundColor: "#FACC15" } : {}}
+                onMouseEnter={(e) => {
+                  if (canAnalyze) {
+                    e.target.style.backgroundColor = "#EAB308";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (canAnalyze) {
+                    e.target.style.backgroundColor = "#FACC15";
+                  }
+                }}
               >
                 {isAnalyzing ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
                     <span>Analyse en cours...</span>
                   </>
                 ) : (
@@ -437,18 +410,48 @@ const PlantDiseaseDetection = () => {
               </button>
 
               {isAnalyzing && (
-                <div className="mt-6 max-w-md mx-auto">
-                  <div className="bg-white rounded-lg shadow-sm border p-4">
-                    <div className="flex items-center justify-center space-x-2 mb-3">
-                      <Leaf className="w-5 h-5 text-green-600" />
-                      <span className="text-gray-700 font-medium">Analyse IA en cours</span>
+                <div className="mt-6 max-w-md mx-auto animate-fadeIn">
+                  <div className="bg-white rounded-lg shadow-lg border p-6 relative overflow-hidden">
+                    {/* Animation de fond */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-50 via-yellow-100 to-yellow-50 animate-pulse"></div>
+
+                    {/* Particules flottantes */}
+                    <div className="absolute top-2 left-4 w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
+                    <div className="absolute top-4 right-6 w-1 h-1 bg-green-400 rounded-full animate-bounce delay-150"></div>
+                    <div className="absolute bottom-4 left-6 w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-300"></div>
+
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-center space-x-3 mb-4">
+                        <div className="relative">
+                          <Leaf className="w-6 h-6 text-green-600 animate-pulse" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
+                        </div>
+                        <span className="text-gray-900 font-semibold text-lg">Analyse IA en cours</span>
+                      </div>
+
+                      {/* Barre de progression améliorée */}
+                      <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-yellow-400 via-green-400 to-blue-400 rounded-full animate-pulse relative">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+                        </div>
+                      </div>
+
+                      <div className="text-center space-y-2">
+                        <p className="text-gray-700 font-medium animate-pulse">
+                          🔍 Détection des maladies...
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          L'IA analyse vos images avec précision
+                        </p>
+                      </div>
+
+                      {/* Indicateurs de progression */}
+                      <div className="flex justify-center space-x-2 mt-4">
+                        <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full animate-pulse"></div>
-                    </div>
-                    <p className="text-gray-600 text-sm mt-2 text-center">
-                      Détection des maladies via l'API Flask...
-                    </p>
                   </div>
                 </div>
               )}
@@ -479,7 +482,7 @@ const PlantDiseaseDetection = () => {
         <div className="max-w-6xl mx-auto">
           {/* Résultats */}
           <div className="grid gap-8 mb-8">
-            {analysisResults.map((result, index) => (
+            {analysisResults.map((result) => (
               <div key={result.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
                 <div className="md:flex">
                   <div className="md:w-1/3">
@@ -501,10 +504,10 @@ const PlantDiseaseDetection = () => {
                             🌱 {result.plant}
                           </span>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${result.isHealthy
-                              ? 'bg-green-100 text-green-800'
-                              : result.status === 'ERREUR'
-                                ? 'bg-gray-100 text-gray-800'
-                                : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : result.status === 'ERREUR'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-red-100 text-red-800'
                             }`}>
                             {result.isHealthy ? (
                               <CheckCircle className="w-4 h-4 mr-1" />
@@ -552,15 +555,28 @@ const PlantDiseaseDetection = () => {
           <div className="flex justify-center space-x-4">
             <button
               onClick={resetAnalysis}
-              className="px-6 py-3 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
+              className="px-6 py-3 border border-yellow-500 rounded-lg font-medium text-gray-900 hover:scale-105 transition-all duration-200 flex items-center space-x-2 shadow-md"
+              style={{ backgroundColor: "#FACC15" }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#EAB308";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "#FACC15";
+              }}
             >
               <Camera className="w-5 h-5" />
               <span>Nouvelle analyse</span>
             </button>
 
             <button
-              style={{ backgroundColor: '#FACC15' }}
-              className="px-6 py-3 text-gray-900 hover:bg-yellow-500 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+              className="px-6 py-3 text-gray-900 hover:scale-105 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-md"
+              style={{ backgroundColor: "#FACC15" }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#EAB308";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "#FACC15";
+              }}
             >
               <BookOpen className="w-5 h-5" />
               <span>Guide de traitement</span>
@@ -571,7 +587,12 @@ const PlantDiseaseDetection = () => {
     </div>
   );
 
-  return currentPage === 'upload' ? <UploadPage /> : <ResultsPage />;
+  return (
+    <>
+      <style>{styles}</style>
+      {currentPage === 'upload' ? <UploadPage /> : <ResultsPage />}
+    </>
+  );
 };
 
 export default PlantDiseaseDetection;

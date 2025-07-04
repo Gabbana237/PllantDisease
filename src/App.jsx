@@ -39,9 +39,9 @@ function App() {
             <Route
             path="/dashboard"
             element={
-          
+              <PrivateRoute>
                 <UserDashboard />
-            
+              </PrivateRoute>
             }
           />
 
