@@ -27,9 +27,10 @@ const PlantDiseaseDetection = () => {
   const [selectedDisease, setSelectedDisease] = useState(null);
   const fileInputRef = useRef(null);
 
-  const API_URL = 'http://localhost:5000'; // Placeholder pour future API
+  // URL de l'API Flask
+  const API_URL = 'http://localhost:5000';
 
-  // Base de données des maladies simulées
+  // Base de données locale des traitements
   const treatmentDatabase = {
     "Pepper_bell__Bacterial_spot": {
       name: "Tache bactérienne du poivron",
@@ -59,22 +60,52 @@ const PlantDiseaseDetection = () => {
         maintenance: ["Continuez à bien arroser et fertiliser"]
       }
     },
-    // Vous pouvez ajouter plus de maladies ici si nécessaire
+    "Tomato_healthy": {
+      name: "Tomate saine",
+      plant: "Tomate",
+      severity: "Aucune",
+      description: "Votre tomate est en parfaite santé !",
+      symptoms: ["Feuillage vert", "Fruits abondants"],
+      causes: ["Soins appropriés"],
+      treatment: {
+        maintenance: ["Maintenir un bon arrosage et fertilisation"]
+      }
+    }
+    // Ajoutez ici toutes vos autres maladies si nécessaire...
   };
 
+  // Fonction appelant l'API Flask
   const predictDisease = async (file) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const diseases = Object.keys(treatmentDatabase);
-    const randomDisease = diseases[Math.floor(Math.random() * diseases.length)];
-    const diseaseData = treatmentDatabase[randomDisease];
+    const formData = new FormData();
+    formData.append("image", file);
 
-    return {
-      plant: diseaseData.plant,
-      disease: diseaseData.name,
-      status: randomDisease.includes('healthy') ? 'SAIN' : 'MALADE',
-      confidence: `${Math.floor(Math.random() * 20) + 80}%`,
-      diseaseKey: randomDisease
-    };
+    try {
+      const response = await fetch(`${API_URL}/predict`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la prédiction");
+
+      const data = await response.json();
+
+      // Création d'une clé correspondante pour le lookup local
+      const predictedClassName = `${data.plant}__${data.disease.replace(/\s+/g, '_')}`;
+      const matchedDiseaseKey = Object.keys(treatmentDatabase).find(
+        key => key.toLowerCase() === predictedClassName.toLowerCase()
+      );
+
+      return {
+        plant: data.plant,
+        disease: data.disease,
+        status: data.status,
+        confidence: data.confidence,
+        diseaseKey: matchedDiseaseKey || null
+      };
+    } catch (error) {
+      console.error("Échec de la prédiction via l'API:", error);
+      throw error;
+    }
   };
 
   const handleDragEnter = useCallback((e) => {
@@ -98,8 +129,8 @@ const PlantDiseaseDetection = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(
-      (file) => file.type.startsWith('image/')
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(file =>
+      file.type.startsWith('image/')
     );
     if (droppedFiles.length > 0) {
       processFiles(droppedFiles);
@@ -107,7 +138,7 @@ const PlantDiseaseDetection = () => {
   }, []);
 
   const processFiles = (newFiles) => {
-    const processedFiles = newFiles.map((file) => ({
+    const processedFiles = newFiles.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       url: URL.createObjectURL(file),
@@ -115,8 +146,8 @@ const PlantDiseaseDetection = () => {
       size: file.size,
       status: 'uploading'
     }));
-    setFiles((prev) => [...prev, ...processedFiles]);
-    processedFiles.forEach((fileObj) => {
+    setFiles(prev => [...prev, ...processedFiles]);
+    processedFiles.forEach(fileObj => {
       simulateUpload(fileObj.id);
     });
   };
@@ -127,20 +158,20 @@ const PlantDiseaseDetection = () => {
       progress += Math.random() * 30;
       if (progress >= 100) {
         progress = 100;
-        setUploadProgress((prev) => ({ ...prev, [fileId]: 100 }));
-        setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, status: 'completed' } : f))
-        );
+        setUploadProgress(prev => ({ ...prev, [fileId]: 100 }));
+        setFiles(prev => prev.map(f =>
+          f.id === fileId ? { ...f, status: 'completed' } : f
+        ));
         clearInterval(interval);
       } else {
-        setUploadProgress((prev) => ({ ...prev, [fileId]: Math.round(progress) }));
+        setUploadProgress(prev => ({ ...prev, [fileId]: Math.round(progress) }));
       }
     }, 200);
   };
 
   const handleFileInput = (e) => {
-    const selectedFiles = Array.from(e.target.files).filter(
-      (file) => file.type.startsWith('image/')
+    const selectedFiles = Array.from(e.target.files).filter(file =>
+      file.type.startsWith('image/')
     );
     if (selectedFiles.length > 0) {
       processFiles(selectedFiles);
@@ -148,8 +179,8 @@ const PlantDiseaseDetection = () => {
   };
 
   const removeFile = (fileId) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
-    setUploadProgress((prev) => {
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+    setUploadProgress(prev => {
       const newProgress = { ...prev };
       delete newProgress[fileId];
       return newProgress;
@@ -160,12 +191,14 @@ const PlantDiseaseDetection = () => {
     setIsAnalyzing(true);
     setApiError(null);
     try {
-      const completedFiles = files.filter((f) => f.status === 'completed');
+      const completedFiles = files.filter(f => f.status === 'completed');
       const results = [];
       for (const file of completedFiles) {
         try {
           const prediction = await predictDisease(file.file);
-          const diseaseData = treatmentDatabase[prediction.diseaseKey];
+          const diseaseData = prediction.diseaseKey
+            ? treatmentDatabase[prediction.diseaseKey]
+            : treatmentDatabase["Tomato_healthy"];
           results.push({
             id: file.id,
             image: file.url,
@@ -176,8 +209,7 @@ const PlantDiseaseDetection = () => {
             confidence: prediction.confidence,
             diseaseKey: prediction.diseaseKey,
             isHealthy: prediction.status === 'SAIN',
-            treatment:
-              diseaseData.treatment?.immediate?.[0] || 'Aucun traitement spécifique requis.'
+            treatment: diseaseData.treatment?.immediate?.[0] || 'Aucun traitement spécifique requis.'
           });
         } catch (error) {
           console.error(`Erreur pour ${file.name}:`, error);
@@ -220,17 +252,14 @@ const PlantDiseaseDetection = () => {
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'Critique':
-        return 'text-red-600 bg-red-100';
-      case 'Élevée':
-        return 'text-orange-600 bg-orange-100';
-      case 'Modérée':
-        return 'text-yellow-600 bg-yellow-100';
-      default:
-        return 'text-green-600 bg-green-100';
+      case 'Critique': return 'text-red-600 bg-red-100';
+      case 'Élevée': return 'text-orange-600 bg-orange-100';
+      case 'Modérée': return 'text-yellow-600 bg-yellow-100';
+      default: return 'text-green-600 bg-green-100';
     }
   };
 
+  // Page Upload
   const UploadPage = () => (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-12">
@@ -245,6 +274,16 @@ const PlantDiseaseDetection = () => {
         </div>
 
         <div className="max-w-4xl mx-auto">
+          {/* Affichage des erreurs */}
+          {apiError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+                <p className="text-red-800 font-medium">{apiError}</p>
+              </div>
+            </div>
+          )}
+
           {/* Drag & Drop Zone */}
           <div
             onDragEnter={handleDragEnter}
@@ -273,25 +312,17 @@ const PlantDiseaseDetection = () => {
               >
                 {isDragging ? 'Déposez vos photos ici' : 'Télécharger des images'}
               </h3>
-              <p
-                className={`text-lg mb-2 transition-colors duration-300 ${
-                  isDragging ? 'text-blue-600' : 'text-gray-600'
-                }`}
-              >
-                Glissez et déposez vos fichiers ici
-              </p>
+              <p className="text-lg mb-2">Glissez et déposez vos fichiers ici</p>
               <p className="text-gray-500 mb-8">ou cliquez pour parcourir vos fichiers</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className={`px-8 py-4 rounded-full font-medium text-lg transition-all duration-300 ${
-                  isDragging ? 'scale-105' : 'hover:scale-105'
-                } shadow-lg hover:shadow-xl text-gray-900`}
-                style={{ backgroundColor: '#FACC15' }}
+                className="px-8 py-4 rounded-full font-medium text-lg transition-all duration-300 hover:scale-105 shadow-lg text-gray-900"
+                style={{ backgroundColor: "#FACC15" }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#EAB308';
+                  e.target.style.backgroundColor = "#EAB308";
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#FACC15';
+                  e.target.style.backgroundColor = "#FACC15";
                 }}
               >
                 Sélectionner des images
@@ -394,6 +425,7 @@ const PlantDiseaseDetection = () => {
     </div>
   );
 
+  // Page Résultats
   const ResultsPage = () => (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-12">
@@ -430,9 +462,7 @@ const PlantDiseaseDetection = () => {
                           </span>
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                              result.isHealthy
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                              result.isHealthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}
                           >
                             {result.isHealthy ? (
@@ -487,12 +517,11 @@ const PlantDiseaseDetection = () => {
                     {result.diseaseKey && (
                       <div className="mt-4">
                         <button
-                        style={{ backgroundColor: '#FACC15' }}
                           onClick={() => showTreatmentGuide(result.diseaseKey)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-2"
                         >
                           <BookOpen className="w-4 h-4" />
-                          <span  >Guide détaillé</span>
+                          <span>Guide détaillé</span>
                         </button>
                       </div>
                     )}
@@ -522,6 +551,7 @@ const PlantDiseaseDetection = () => {
     </div>
   );
 
+  // Page Guide de Traitement
   const TreatmentGuidePage = () => {
     const diseaseData = selectedDisease ? treatmentDatabase[selectedDisease] : null;
 
@@ -565,7 +595,6 @@ const PlantDiseaseDetection = () => {
             </div>
           </div>
           <div className="max-w-4xl mx-auto">
-            {/* Description */}
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                 <Leaf className="w-5 h-5 mr-2 text-green-600" />
@@ -573,8 +602,6 @@ const PlantDiseaseDetection = () => {
               </h2>
               <p className="text-gray-700 leading-relaxed">{diseaseData.description}</p>
             </div>
-
-            {/* Informations clés */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -605,8 +632,6 @@ const PlantDiseaseDetection = () => {
                 </ul>
               </div>
             </div>
-
-            {/* Traitement */}
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                 <Droplets className="w-5 h-5 mr-2 text-blue-600" />
@@ -631,8 +656,6 @@ const PlantDiseaseDetection = () => {
                 )}
               </div>
             </div>
-
-            {/* Prévention */}
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                 <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
@@ -647,17 +670,6 @@ const PlantDiseaseDetection = () => {
                 ))}
               </ul>
             </div>
-
-            {/* Timeline */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-blue-600" />
-                Délai d'efficacité
-              </h2>
-              <p className="text-lg text-gray-700 font-medium">{diseaseData.timeline}</p>
-            </div>
-
-            {/* Actions */}
             <div className="flex justify-center space-x-4">
               <button
                 onClick={() => setCurrentPage('results')}
