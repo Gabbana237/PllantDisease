@@ -487,11 +487,12 @@ const PlantDiseaseDetection = () => {
                     {result.diseaseKey && (
                       <div className="mt-4">
                         <button
+                        style={{ backgroundColor: '#FACC15' }}
                           onClick={() => showTreatmentGuide(result.diseaseKey)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-2"
                         >
                           <BookOpen className="w-4 h-4" />
-                          <span>Guide détaillé</span>
+                          <span  >Guide détaillé</span>
                         </button>
                       </div>
                     )}
